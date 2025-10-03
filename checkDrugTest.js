@@ -50,8 +50,15 @@ async function checkDrugTest() {
     // Click submit and wait for response
     await page.click('button[type="submit"]');
     
-    // Wait a moment for the page to process
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for page to update (look for any change in the DOM)
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Take a screenshot for debugging
+    await page.screenshot({ path: 'debug-screenshot.png' });
+
+    // Log the entire page HTML for debugging
+    const pageHTML = await page.content();
+    console.log('Page HTML after submit (first 500 chars):', pageHTML.substring(0, 500));
 
     // Try multiple possible selectors for the result
     let message = 'Message not found';
