@@ -19,3 +19,9 @@ jobs:
           DRUG_TEST_PIN: ${{ secrets.DRUG_TEST_PIN }}
           DRUG_TEST_LAST_NAME: ${{ secrets.DRUG_TEST_LAST_NAME }}
         run: node checkDrugTest.js
+      - name: Run drug test check (Ntfy)
+        env:
+          NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
+          DRUG_TEST_PIN: ${{ secrets.DRUG_TEST_PIN }}
+          DRUG_TEST_LAST_NAME: ${{ secrets.DRUG_TEST_LAST_NAME }}
+        run: node checkDrugTestNtfy.js
