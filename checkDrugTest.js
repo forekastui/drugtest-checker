@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer');
-const fetch = require('node-fetch');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const cron = require('node-cron');
 
 // ==== CONFIGURATION ====
@@ -77,3 +77,4 @@ cron.schedule('1 7 * * 1-6', () => {
 if (require.main === module) {
   checkDrugTest();
 }
+
