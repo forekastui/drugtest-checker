@@ -27,7 +27,11 @@ async function checkDrugTest() {
     return;
   }
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox']
+});
+
   const page = await browser.newPage();
   try {
     await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2' });
@@ -77,4 +81,5 @@ cron.schedule('1 7 * * 1-6', () => {
 if (require.main === module) {
   checkDrugTest();
 }
+
 
