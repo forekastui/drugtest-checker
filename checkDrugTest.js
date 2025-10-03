@@ -40,7 +40,7 @@ async function checkDrugTest() {
     await page.waitForSelector('#callInputCode');
     await page.type('#callInputCode', PIN);
     await page.waitForSelector('#lettersInputLastName');
-    await page.type('#lettersInputLastName', LASTNAME);
+    await page.type('#lettersInputLastName', LAST_NAME);
 
     // Submit the form
     await Promise.all([
@@ -83,6 +83,7 @@ cron.schedule('1 7 * * 1-6', () => {
 if (require.main === module) {
   checkDrugTest();
 }
+
 
 
 
