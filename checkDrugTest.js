@@ -1,4 +1,4 @@
- forconst puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const fs = require('fs');
 const path = require('path');
@@ -162,6 +162,7 @@ if (require.main === module) {
     process.exit(0);
   });
 }
+
 
 
 
