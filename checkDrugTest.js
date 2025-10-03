@@ -115,6 +115,8 @@ async function checkDrugTest() {
 
     if (message && message.toLowerCase().includes('scheduled') && message.toLowerCase().includes('drug test') && message.toLowerCase().includes('today')) {
       await sendToDiscord(`Drug test today - ${dateStr}`);
+    } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
+      await sendToDiscord(`⚠️ Outside call-in timeframe - ${dateStr}. Message: "${message}"`);
     } else if (!message || message.length < 10) {
       await sendToDiscord(`Warning: Could not verify result on ${dateStr}. Check debug files. Message: "${message}"`);
     } else {
