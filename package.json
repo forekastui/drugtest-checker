@@ -1,0 +1,11 @@
+{
+  "name": "drugtest-checker",
+  "version": "1.0.0",
+  "main": "checkDrugTest.js",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^22.0.0",
+    "node-fetch": "^3.3.2",
+    "node-cron": "^3.0.3"
+  }
+}
