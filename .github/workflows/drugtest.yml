@@ -14,4 +14,9 @@ jobs:
         with:
           node-version: '18'
       - run: npm install
+      - name: Run drug test check
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DRUG_TEST_PIN: ${{ secrets.DRUG_TEST_PIN }}
+          DRUG_TEST_LAST_NAME: ${{ secrets.DRUG_TEST_LAST_NAME }}
       - run: node checkDrugTest.js
