@@ -1,0 +1,171 @@
+const puppeteer = require('puppeteer');
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const fs = require('fs');
+const path = require('path');
+
+// ==== CONFIGURATION ====
+const WEBSITE_URL = 'https://drugtestcheck.com';
+const PIN = process.env.DRUG_TEST_PIN;
+const LAST_NAME = process.env.DRUG_TEST_LAST_NAME;
+const NTFY_TOPIC_URL = process.env.NTFY_TOPIC_URL || 'https://ntfy.sh/drugtest-ross-8929856';
+
+// Helper: Send notification via Ntfy
+async function sendNotification(title, message, priority = 'default') {
+  try {
+    await fetch(NTFY_TOPIC_URL, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic: NTFY_TOPIC_URL.split('/').pop(),
+        title: title,
+        message: message,
+        priority: priority,
+      }),
+    });
+    console.log('Sent notification:', title, '-', message);
+  } catch (err) {
+    console.error('Failed to send notification:', err.message);
+  }
+}
+
+// Core task
+async function checkDrugTest() {
+  const today = new Date();
+  const nyTime = today.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  const dateNY = new Date(nyTime);
+  
+  if (dateNY.getDay() === 0) {
+    console.log('Sunday: skipping check.');
+    return;
+  }
+
+  let browser;
+  try {
+    console.log('Launching browser...');
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    console.log('Navigating to website...');
+    await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // Handle cookie consent popup
+    console.log('Checking for cookie consent popup...');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Look for the specific TrustArc accept button
+      const acceptButtonSelector = '#truste-consent-button';
+      const acceptButton = await page.$(acceptButtonSelector);
+      
+      if (acceptButton) {
+        console.log('Found cookie ACCEPT button, clicking...');
+        await acceptButton.click();
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Cookie consent accepted');
+      } else {
+        console.log('Cookie popup not found, continuing...');
+      }
+    } catch (err) {
+      console.log('Error handling cookie popup:', err.message);
+    }
+
+    console.log('Waiting for PIN input...');
+    await page.waitForSelector('#callInputCode', { timeout: 15000 });
+    await page.type('#callInputCode', PIN);
+    console.log('PIN entered');
+    
+    console.log('Waiting for last name input...');
+    await page.waitForSelector('#lettersInputLastName', { timeout: 15000 });
+    await page.type('#lettersInputLastName', LAST_NAME);
+    console.log('Last name entered');
+
+    console.log('Clicking submit button...');
+    await page.click('button[type="submit"]');
+    
+    console.log('Waiting for page to process...');
+    await new Promise(resolve => setTimeout(resolve, 4000));
+
+    // Save screenshot to current directory
+    const screenshotPath = path.join(process.cwd(), 'debug-screenshot.png');
+    await page.screenshot({ path: screenshotPath });
+    console.log('Screenshot saved to:', screenshotPath);
+
+    // Get all text content from page
+    const allText = await page.evaluate(() => document.body.innerText);
+    console.log('=== PAGE TEXT CONTENT ===');
+    console.log(allText);
+    console.log('=== END PAGE TEXT ===');
+
+    // Save HTML to file for inspection
+    const htmlPath = path.join(process.cwd(), 'debug-page.html');
+    const pageHTML = await page.content();
+    fs.writeFileSync(htmlPath, pageHTML);
+    console.log('HTML saved to:', htmlPath);
+
+    // Try to find the result message
+    let message = await page.evaluate(() => {
+      // Try multiple selectors
+      const selectors = [
+        'label[for="reply"]',
+        '#en-result',
+        '#en-result label',
+        '.result',
+        '.message',
+        '[class*="result"]',
+        '[id*="result"]',
+        'div.alert',
+        'p.message'
+      ];
+      
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el && el.innerText && el.innerText.trim()) {
+          console.log('Found with selector:', sel);
+          return el.innerText.trim();
+        }
+      }
+      
+      // If nothing found, return all visible text
+      return document.body.innerText.trim();
+    });
+
+    const dateStr = dateNY.toLocaleDateString('en-US');
+    console.log(`[${dateStr}] Found message:`, message);
+
+    if (message && message.toLowerCase().includes('scheduled') && message.toLowerCase().includes('drug test') && message.toLowerCase().includes('today')) {
+      await sendNotification('🚨 Drug Test Today', `You are scheduled for a drug test on ${dateStr}`, 'urgent');
+    } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
+      await sendNotification('⚠️ Outside Timeframe', `Check was outside call-in timeframe on ${dateStr}`, 'high');
+    } else if (!message || message.length < 10) {
+      await sendNotification('❌ Check Failed', `Could not verify result on ${dateStr}. Check manually.`, 'high');
+    } else {
+      await sendNotification('✅ No Test Today', `No drug test scheduled on ${dateStr}`, 'default');
+    }
+
+  } catch (err) {
+    console.error('ERROR:', err);
+    await sendNotification('❌ Error', `Error checking drug test: ${err.message}`, 'high');
+  } finally {
+    if (browser) {
+      console.log('Closing browser...');
+      await browser.close();
+    }
+  }
+}
+
+// Run once then exit
+if (require.main === module) {
+  checkDrugTest().finally(() => {
+    console.log('Script finished');
+    process.exit(0);
+  });
+}
