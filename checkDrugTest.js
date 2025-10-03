@@ -51,7 +51,7 @@ async function checkDrugTest() {
     await page.click('button[type="submit"]');
     
     // Wait a moment for the page to process
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Try multiple possible selectors for the result
     let message = 'Message not found';
