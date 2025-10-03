@@ -135,13 +135,13 @@ async function checkDrugTest() {
     console.log(`[${dateStr}] Found message:`, message);
 
     if (message && message.toLowerCase().includes('scheduled') && message.toLowerCase().includes('drug test') && message.toLowerCase().includes('today')) {
-      await sendToDiscord(`✅ Drug test scheduled today on ${dateStr} @everyone`);
+      await sendToDiscord(`✅ __Drug test__ scheduled today on **${dateStr}**. @everyone`);
     } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
-      await sendToDiscord(`⚠️ Outside call-in timeframe on ${dateStr}. @everyone`);
+      await sendToDiscord(`⚠️ __Outside call-in timeframe__ on **${dateStr}**. @everyone`);
     } else if (!message || message.length < 10) {
-      await sendToDiscord(`Warning: Could not verify result on ${dateStr}. Check debug files. Message: "${message}"`);
+      await sendToDiscord(`Warning: Could not verify result on **${dateStr}**. Check debug files. Message: "${message}"`);
     } else {
-      await sendToDiscord(`❌ No drug test scheduled today on ${dateStr} @everyone`);
+      await sendToDiscord(`❌ __No drug test__ scheduled today on **${dateStr}**. @everyone`);
     }
 
   } catch (err) {
@@ -162,6 +162,7 @@ if (require.main === module) {
     process.exit(0);
   });
 }
+
 
 
 
