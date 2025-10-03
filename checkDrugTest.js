@@ -50,40 +50,25 @@ async function checkDrugTest() {
     console.log('Navigating to website...');
     await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Handle cookie consent popup if it appears
+    // Handle cookie consent popup
     console.log('Checking for cookie consent popup...');
     try {
-      // Wait a moment for popup to appear
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Try to find and click the ACCEPT button
-      const acceptButton = await page.$('button:has-text("ACCEPT")');
+      // Look for the specific TrustArc accept button
+      const acceptButtonSelector = '#truste-consent-button';
+      const acceptButton = await page.$(acceptButtonSelector);
+      
       if (acceptButton) {
-        console.log('Found ACCEPT button, clicking...');
+        console.log('Found cookie ACCEPT button, clicking...');
         await acceptButton.click();
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Cookie consent accepted');
       } else {
-        // Try alternative selectors for accept button
-        const clicked = await page.evaluate(() => {
-          const buttons = Array.from(document.querySelectorAll('button, a'));
-          const acceptBtn = buttons.find(btn => 
-            btn.innerText && btn.innerText.toUpperCase().includes('ACCEPT')
-          );
-          if (acceptBtn) {
-            acceptBtn.click();
-            return true;
-          }
-          return false;
-        });
-        if (clicked) {
-          console.log('Clicked ACCEPT button via evaluate');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          console.log('No cookie popup found, continuing...');
-        }
+        console.log('Cookie popup not found, continuing...');
       }
     } catch (err) {
-      console.log('Error handling cookie popup (continuing anyway):', err.message);
+      console.log('Error handling cookie popup:', err.message);
     }
 
     console.log('Waiting for PIN input...');
