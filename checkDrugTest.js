@@ -5,9 +5,9 @@ const path = require('path');
 
 // ==== CONFIGURATION ====
 const WEBSITE_URL = 'https://drugtestcheck.com';
-const PIN = '8929856';
-const LAST_NAME = 'Ross';
-const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1423721130363191368/8-an_fshquIFgxQ7PRlZE_Qe_PwMSBSMaBE3Oe5Y3NhkMXkIvkSLCmDTnRR9RZ1IVqNb';
+const PIN = process.env.DRUG_TEST_PIN;
+const LAST_NAME = process.env.DRUG_TEST_LAST_NAME;
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 // Helper: Send message to Discord
 async function sendToDiscord(message) {
@@ -162,6 +162,7 @@ if (require.main === module) {
     process.exit(0);
   });
 }
+
 
 
 
