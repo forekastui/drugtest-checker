@@ -10,15 +10,20 @@ const LAST_NAME = process.env.DRUG_TEST_LAST_NAME;
 const NTFY_TOPIC_URL = process.env.NTFY_TOPIC_URL || 'https://ntfy.sh/drugtest-ross-8929856';
 
 // Helper: Send notification via Ntfy
-async function sendNotification(title, message, priority = 'default') {
+async function sendNotification(title, message, priority = 'default', tags = '') {
   try {
+    const headers = { 
+      'Title': title,
+      'Priority': priority,
+    };
+    
+    if (tags) {
+      headers['Tags'] = tags;
+    }
+    
     await fetch(NTFY_TOPIC_URL, {
       method: 'POST',
-      headers: { 
-        'Title': title,
-        'Priority': priority,
-        'Tags': 'warning',
-      },
+      headers: headers,
       body: message,
     });
     console.log('Sent notification:', title, '-', message);
@@ -139,18 +144,18 @@ async function checkDrugTest() {
     console.log(`[${dateStr}] Found message:`, message);
 
     if (message && message.toLowerCase().includes('scheduled') && message.toLowerCase().includes('drug test') && message.toLowerCase().includes('today')) {
-      await sendNotification('Drug Test Today', `You are scheduled for a drug test on ${dateStr}`, 'urgent');
+      await sendNotification('Drug Test Today', `You are scheduled for a drug test on ${dateStr}`, 'urgent', 'rotating_light');
     } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
-      await sendNotification('Outside Timeframe', `Check was outside call-in timeframe on ${dateStr}`, 'high');
+      await sendNotification('Outside Timeframe', `Check was outside call-in timeframe on ${dateStr}`, 'high', 'warning');
     } else if (!message || message.length < 10) {
-      await sendNotification('Check Failed', `Could not verify result on ${dateStr}. Check manually.`, 'high');
+      await sendNotification('Check Failed', `Could not verify result on ${dateStr}. Check manually.`, 'high', 'x');
     } else {
-      await sendNotification('No Test Today', `No drug test scheduled on ${dateStr}`, 'default');
+      await sendNotification('No Test Today', `No drug test scheduled on ${dateStr}`, 'default', 'white_check_mark');
     }
 
   } catch (err) {
     console.error('ERROR:', err);
-    await sendNotification('Error', `Error checking drug test: ${err.message}`, 'high');
+    await sendNotification('Error', `Error checking drug test: ${err.message}`, 'high', 'x');
   } finally {
     if (browser) {
       console.log('Closing browser...');
