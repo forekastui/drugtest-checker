@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+ forconst puppeteer = require('puppeteer');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const fs = require('fs');
 const path = require('path');
@@ -135,13 +135,13 @@ async function checkDrugTest() {
     console.log(`[${dateStr}] Found message:`, message);
 
     if (message && message.toLowerCase().includes('scheduled') && message.toLowerCase().includes('drug test') && message.toLowerCase().includes('today')) {
-      await sendToDiscord(`Drug test today - ${dateStr}`);
+      await sendToDiscord(`__Drug test scheduled toda__y on **${dateStr}**`);
     } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
       await sendToDiscord(`⚠️ Outside call-in timeframe - ${dateStr}. Message: "${message}"`);
     } else if (!message || message.length < 10) {
       await sendToDiscord(`Warning: Could not verify result on ${dateStr}. Check debug files. Message: "${message}"`);
     } else {
-      await sendToDiscord(`No drug test today - ${dateStr}`);
+      await sendToDiscord(`__No drug test scheduled toda__y on **${dateStr}**`);
     }
 
   } catch (err) {
@@ -162,3 +162,4 @@ if (require.main === module) {
     process.exit(0);
   });
 }
+
