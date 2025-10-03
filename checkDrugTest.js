@@ -48,8 +48,9 @@ async function checkDrugTest() {
     // Submit the form
     await Promise.all([
       page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2' }),
+      page.waitForSelector('#en-result', { timeout: 10000 })
     ]);
+
 
     // Extract the result message
     const message = await page.evaluate(() => {
@@ -77,4 +78,5 @@ async function checkDrugTest() {
 if (require.main === module) {
   checkDrugTest().finally(() => process.exit(0));
 }
+
 
