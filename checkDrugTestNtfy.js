@@ -15,14 +15,11 @@ async function sendNotification(title, message, priority = 'default') {
     await fetch(NTFY_TOPIC_URL, {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
+        'Title': title,
+        'Priority': priority,
+        'Tags': 'warning',
       },
-      body: JSON.stringify({
-        topic: NTFY_TOPIC_URL.split('/').pop(),
-        title: title,
-        message: message,
-        priority: priority,
-      }),
+      body: message,
     });
     console.log('Sent notification:', title, '-', message);
   } catch (err) {
