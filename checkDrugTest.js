@@ -21,6 +21,7 @@ async function checkDrugTest() {
   const today = new Date();
   const nyTime = today.toLocaleString('en-US', { timeZone: 'America/New_York' });
   const dateNY = new Date(nyTime);
+  
   if (dateNY.getDay() === 0) {
     console.log('Sunday: skipping check.');
     return;
@@ -33,39 +34,79 @@ async function checkDrugTest() {
 
   const page = await browser.newPage();
   await page.setUserAgent(
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-);
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  );
 
   try {
-    await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2' });
+    await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 
     // Fill in the form
-    await page.waitForSelector('#callInputCode');
+    await page.waitForSelector('#callInputCode', { timeout: 15000 });
     await page.type('#callInputCode', PIN);
-    await page.waitForSelector('#lettersInputLastName');
+    
+    await page.waitForSelector('#lettersInputLastName', { timeout: 15000 });
     await page.type('#lettersInputLastName', LAST_NAME);
 
-    // Submit the form
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForSelector('#en-result', { timeout: 10000 })
-    ]);
+    // Click submit and wait for response
+    await page.click('button[type="submit"]');
+    
+    // Wait a moment for the page to process
+    await page.waitForTimeout(2000);
 
-
-    // Extract the result message
-    const message = await page.evaluate(() => {
-      const label = document.querySelector('label[for="reply"]');
-      return label ? label.innerText.trim() : 'Message not found';
-    });
+    // Try multiple possible selectors for the result
+    let message = 'Message not found';
+    
+    try {
+      // First, try waiting for the result container
+      await page.waitForSelector('#en-result', { timeout: 15000 });
+      
+      // Then try to get the message from label
+      message = await page.evaluate(() => {
+        const label = document.querySelector('label[for="reply"]');
+        if (label) return label.innerText.trim();
+        
+        // Fallback: try to get any text from #en-result
+        const result = document.querySelector('#en-result');
+        if (result) return result.innerText.trim();
+        
+        return 'Message not found';
+      });
+    } catch (selectorError) {
+      console.log('Primary selector failed, trying fallback...');
+      
+      // Fallback: look for any result text on the page
+      message = await page.evaluate(() => {
+        // Try common result selectors
+        const selectors = [
+          'label[for="reply"]',
+          '#en-result',
+          '.result-message',
+          '[class*="result"]',
+          '[id*="result"]'
+        ];
+        
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el && el.innerText.trim()) {
+            return el.innerText.trim();
+          }
+        }
+        
+        return 'Could not find result message';
+      });
+    }
 
     const dateStr = dateNY.toLocaleDateString('en-US');
     console.log(`[${dateStr}] Website message:`, message);
 
     if (message.startsWith('You are scheduled for a drug test today')) {
       await sendToDiscord(`Drug test today - ${dateStr}`);
+    } else if (message.includes('Message not found') || message.includes('Could not find')) {
+      await sendToDiscord(`Warning: Could not verify result on ${dateStr}. Please check manually.`);
     } else {
       await sendToDiscord(`No drug test today - ${dateStr}`);
     }
+
   } catch (err) {
     console.error('Error during check:', err);
     await sendToDiscord(`Error checking drug test: ${err.message}`);
@@ -78,5 +119,3 @@ async function checkDrugTest() {
 if (require.main === module) {
   checkDrugTest().finally(() => process.exit(0));
 }
-
-
