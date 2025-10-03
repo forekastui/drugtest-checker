@@ -37,8 +37,10 @@ async function checkDrugTest() {
     await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2' });
 
     // Fill in the form
+    await page.waitForSelector('#callInputCode');
     await page.type('#callInputCode', PIN);
     await page.waitForSelector('#lettersInputLastName');
+    await page.type('#lettersInputLastName', LASTNAME);
 
     // Submit the form
     await Promise.all([
@@ -81,6 +83,7 @@ cron.schedule('1 7 * * 1-6', () => {
 if (require.main === module) {
   checkDrugTest();
 }
+
 
 
 
