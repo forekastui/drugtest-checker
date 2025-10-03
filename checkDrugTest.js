@@ -50,6 +50,42 @@ async function checkDrugTest() {
     console.log('Navigating to website...');
     await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 
+    // Handle cookie consent popup if it appears
+    console.log('Checking for cookie consent popup...');
+    try {
+      // Wait a moment for popup to appear
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Try to find and click the ACCEPT button
+      const acceptButton = await page.$('button:has-text("ACCEPT")');
+      if (acceptButton) {
+        console.log('Found ACCEPT button, clicking...');
+        await acceptButton.click();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        // Try alternative selectors for accept button
+        const clicked = await page.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button, a'));
+          const acceptBtn = buttons.find(btn => 
+            btn.innerText && btn.innerText.toUpperCase().includes('ACCEPT')
+          );
+          if (acceptBtn) {
+            acceptBtn.click();
+            return true;
+          }
+          return false;
+        });
+        if (clicked) {
+          console.log('Clicked ACCEPT button via evaluate');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          console.log('No cookie popup found, continuing...');
+        }
+      }
+    } catch (err) {
+      console.log('Error handling cookie popup (continuing anyway):', err.message);
+    }
+
     console.log('Waiting for PIN input...');
     await page.waitForSelector('#callInputCode', { timeout: 15000 });
     await page.type('#callInputCode', PIN);
