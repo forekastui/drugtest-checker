@@ -1,5 +1,7 @@
 const puppeteer = require('puppeteer');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const fs = require('fs');
+const path = require('path');
 
 // ==== CONFIGURATION ====
 const WEBSITE_URL = 'https://drugtestcheck.com';
@@ -9,11 +11,16 @@ const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/142372113036319136
 
 // Helper: Send message to Discord
 async function sendToDiscord(message) {
-  await fetch(DISCORD_WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: message }),
-  });
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: message }),
+    });
+    console.log('Sent to Discord:', message);
+  } catch (err) {
+    console.error('Failed to send to Discord:', err.message);
+  }
 }
 
 // Core task
@@ -27,102 +34,108 @@ async function checkDrugTest() {
     return;
   }
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
-
-  const page = await browser.newPage();
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  );
-
+  let browser;
   try {
+    console.log('Launching browser...');
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    console.log('Navigating to website...');
     await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Fill in the form
+    console.log('Waiting for PIN input...');
     await page.waitForSelector('#callInputCode', { timeout: 15000 });
     await page.type('#callInputCode', PIN);
+    console.log('PIN entered');
     
+    console.log('Waiting for last name input...');
     await page.waitForSelector('#lettersInputLastName', { timeout: 15000 });
     await page.type('#lettersInputLastName', LAST_NAME);
+    console.log('Last name entered');
 
-    // Click submit and wait for response
+    console.log('Clicking submit button...');
     await page.click('button[type="submit"]');
     
-    // Wait for page to update (look for any change in the DOM)
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log('Waiting for page to process...');
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
-    // Take a screenshot for debugging
-    await page.screenshot({ path: 'debug-screenshot.png' });
+    // Save screenshot to current directory
+    const screenshotPath = path.join(process.cwd(), 'debug-screenshot.png');
+    await page.screenshot({ path: screenshotPath });
+    console.log('Screenshot saved to:', screenshotPath);
 
-    // Log the entire page HTML for debugging
+    // Get all text content from page
+    const allText = await page.evaluate(() => document.body.innerText);
+    console.log('=== PAGE TEXT CONTENT ===');
+    console.log(allText);
+    console.log('=== END PAGE TEXT ===');
+
+    // Save HTML to file for inspection
+    const htmlPath = path.join(process.cwd(), 'debug-page.html');
     const pageHTML = await page.content();
-    console.log('Page HTML after submit (first 500 chars):', pageHTML.substring(0, 500));
+    fs.writeFileSync(htmlPath, pageHTML);
+    console.log('HTML saved to:', htmlPath);
 
-    // Try multiple possible selectors for the result
-    let message = 'Message not found';
-    
-    try {
-      // First, try waiting for the result container
-      await page.waitForSelector('#en-result', { timeout: 15000 });
+    // Try to find the result message
+    let message = await page.evaluate(() => {
+      // Try multiple selectors
+      const selectors = [
+        'label[for="reply"]',
+        '#en-result',
+        '#en-result label',
+        '.result',
+        '.message',
+        '[class*="result"]',
+        '[id*="result"]',
+        'div.alert',
+        'p.message'
+      ];
       
-      // Then try to get the message from label
-      message = await page.evaluate(() => {
-        const label = document.querySelector('label[for="reply"]');
-        if (label) return label.innerText.trim();
-        
-        // Fallback: try to get any text from #en-result
-        const result = document.querySelector('#en-result');
-        if (result) return result.innerText.trim();
-        
-        return 'Message not found';
-      });
-    } catch (selectorError) {
-      console.log('Primary selector failed, trying fallback...');
-      
-      // Fallback: look for any result text on the page
-      message = await page.evaluate(() => {
-        // Try common result selectors
-        const selectors = [
-          'label[for="reply"]',
-          '#en-result',
-          '.result-message',
-          '[class*="result"]',
-          '[id*="result"]'
-        ];
-        
-        for (const sel of selectors) {
-          const el = document.querySelector(sel);
-          if (el && el.innerText.trim()) {
-            return el.innerText.trim();
-          }
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el && el.innerText && el.innerText.trim()) {
+          console.log('Found with selector:', sel);
+          return el.innerText.trim();
         }
-        
-        return 'Could not find result message';
-      });
-    }
+      }
+      
+      // If nothing found, return all visible text
+      return document.body.innerText.trim();
+    });
 
     const dateStr = dateNY.toLocaleDateString('en-US');
-    console.log(`[${dateStr}] Website message:`, message);
+    console.log(`[${dateStr}] Found message:`, message);
 
-    if (message.startsWith('You are scheduled for a drug test today')) {
+    if (message && message.toLowerCase().includes('scheduled') && message.toLowerCase().includes('drug test') && message.toLowerCase().includes('today')) {
       await sendToDiscord(`Drug test today - ${dateStr}`);
-    } else if (message.includes('Message not found') || message.includes('Could not find')) {
-      await sendToDiscord(`Warning: Could not verify result on ${dateStr}. Please check manually.`);
+    } else if (!message || message.length < 10) {
+      await sendToDiscord(`Warning: Could not verify result on ${dateStr}. Check debug files. Message: "${message}"`);
     } else {
       await sendToDiscord(`No drug test today - ${dateStr}`);
     }
 
   } catch (err) {
-    console.error('Error during check:', err);
+    console.error('ERROR:', err);
     await sendToDiscord(`Error checking drug test: ${err.message}`);
   } finally {
-    await browser.close();
+    if (browser) {
+      console.log('Closing browser...');
+      await browser.close();
+    }
   }
 }
 
 // Run once then exit
 if (require.main === module) {
-  checkDrugTest().finally(() => process.exit(0));
+  checkDrugTest().finally(() => {
+    console.log('Script finished');
+    process.exit(0);
+  });
 }
