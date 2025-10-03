@@ -1,6 +1,5 @@
 const puppeteer = require('puppeteer');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const cron = require('node-cron');
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 // ==== CONFIGURATION ====
 const WEBSITE_URL = 'https://drugtestcheck.com';
@@ -28,9 +27,9 @@ async function checkDrugTest() {
   }
 
   const browser = await puppeteer.launch({
-  headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
-});
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
 
   const page = await browser.newPage();
   try {
@@ -62,7 +61,6 @@ async function checkDrugTest() {
     } else {
       await sendToDiscord(`No drug test today - ${dateStr}`);
     }
-
   } catch (err) {
     console.error('Error during check:', err);
     await sendToDiscord(`Error checking drug test: ${err.message}`);
@@ -71,20 +69,7 @@ async function checkDrugTest() {
   }
 }
 
-// Schedule: 7:01 AM New York Time (Mon–Sat)
-cron.schedule('1 7 * * 1-6', () => {
-  console.log('Running scheduled check...');
-  checkDrugTest();
-}, {
-  timezone: 'America/New_York'
-});
-
-// For manual testing
+// Run once then exit
 if (require.main === module) {
-  checkDrugTest();
+  checkDrugTest().finally(() => process.exit(0));
 }
-
-
-
-
-
