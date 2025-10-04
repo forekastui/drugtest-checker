@@ -143,7 +143,7 @@ async function checkDrugTest() {
     const dateStr = dateNY.toLocaleDateString('en-US');
     console.log(`[${dateStr}] Found message:`, message);
 
-    if (message && message.toLowerCase().includes('You are scheduled'))) {
+    if (message && message.toLowerCase().includes('You are scheduled')) {
       await sendNotification('Drug Test Today', `You are scheduled for a drug test on ${dateStr}`, 'urgent', 'rotating_light');
     } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
       await sendNotification('Outside Timeframe', `Check was outside call-in timeframe on ${dateStr}`, 'high', 'warning');
