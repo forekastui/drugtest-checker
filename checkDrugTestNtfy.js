@@ -21,12 +21,19 @@ async function sendNotification(title, message, priority = 'default', tags = '')
       headers['Tags'] = tags;
     }
     
-    await fetch(NTFY_TOPIC_URL, {
+    const response = await fetch(NTFY_TOPIC_URL, {
       method: 'POST',
       headers: headers,
       body: message,
     });
-    console.log('Sent notification:', title, '-', message);
+    
+    if (!response.ok) {
+      console.error('Ntfy error response:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error details:', errorText);
+    } else {
+      console.log('Sent notification:', title, '-', message);
+    }
   } catch (err) {
     console.error('Failed to send notification:', err.message);
   }
