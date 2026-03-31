@@ -3,7 +3,7 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 const fs = require('fs');
 const path = require('path');
 
-// ====  CONFIGURATION  ====
+// === =  CONFIGURATION  = ===
 const WEBSITE_URL = 'https://drugtestcheck.com';
 const PIN = process.env.DRUG_TEST_PIN;
 const LAST_NAME = process.env.DRUG_TEST_LAST_NAME;
