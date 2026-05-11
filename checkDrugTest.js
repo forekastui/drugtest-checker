@@ -9,7 +9,7 @@ const PIN = process.env.DRUG_TEST_PIN;
 const LAST_NAME = process.env.DRUG_TEST_LAST_NAME;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-// Helper: Send message to Discord
+// Helper: Send message to Discord server
 async function sendToDiscord(message) {
   try {
     await fetch(DISCORD_WEBHOOK_URL, {
