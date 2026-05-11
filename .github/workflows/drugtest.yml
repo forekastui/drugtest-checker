@@ -2,7 +2,7 @@
 name: Drug Test Checker
 on:
   schedule:
-    - cron: '1 11 * * 1-6'  # 7:01 AM New York = 11:01 UTC (Monday-Saturday)
+    - cron: '0 10 * * 1-6'  # 6:00 AM New York = 10:00 UTC
   workflow_dispatch:
 jobs:
   check:
