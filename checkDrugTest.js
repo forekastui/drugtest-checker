@@ -83,18 +83,8 @@ async function checkDrugTest() {
     console.log('Clicking submit button...');
     await page.click('button[type="submit"]');
 
-    // Wait for the result to actually appear on the page before reading it
-    console.log('Waiting for result to appear on page...');
-    await page.waitForFunction(
-      () => {
-        const body = document.body.innerText;
-        return body.includes('scheduled') ||
-               body.includes('not scheduled') ||
-               body.includes('please try again');
-      },
-      { timeout: 60000 }
-    );
-    console.log('Result detected on page, reading...');
+    console.log('Waiting for page to process...');
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     // Save screenshot
     const screenshotPath = path.join(process.cwd(), 'debug-screenshot.png');
