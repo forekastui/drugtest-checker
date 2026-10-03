@@ -3,7 +3,7 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 const fs = require('fs');
 const path = require('path');
 
-// === =  CONFIGURATION  = ===
+// ==== CONFIGURATION ====
 const WEBSITE_URL = 'https://drugtestcheck.com';
 const PIN = process.env.DRUG_TEST_PIN;
 const LAST_NAME = process.env.DRUG_TEST_LAST_NAME;
@@ -55,7 +55,6 @@ async function checkDrugTest() {
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Look for the specific TrustArc accept button
       const acceptButtonSelector = '#truste-consent-button';
       const acceptButton = await page.$(acceptButtonSelector);
       
@@ -83,11 +82,21 @@ async function checkDrugTest() {
 
     console.log('Clicking submit button...');
     await page.click('button[type="submit"]');
-    
-    console.log('Waiting for page to process...');
-    await new Promise(resolve => setTimeout(resolve, 4000));
 
-    // Save screenshot to current directory
+    // Wait for the result to actually appear on the page before reading it
+    console.log('Waiting for result to appear on page...');
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText;
+        return body.includes('scheduled') ||
+               body.includes('not scheduled') ||
+               body.includes('please try again');
+      },
+      { timeout: 15000 }
+    );
+    console.log('Result detected on page, reading...');
+
+    // Save screenshot
     const screenshotPath = path.join(process.cwd(), 'debug-screenshot.png');
     await page.screenshot({ path: screenshotPath });
     console.log('Screenshot saved to:', screenshotPath);
@@ -106,7 +115,6 @@ async function checkDrugTest() {
 
     // Try to find the result message
     let message = await page.evaluate(() => {
-      // Try multiple selectors
       const selectors = [
         'label[for="reply"]',
         '#en-result',
@@ -127,7 +135,6 @@ async function checkDrugTest() {
         }
       }
       
-      // If nothing found, return all visible text
       return document.body.innerText.trim();
     });
 
@@ -138,10 +145,10 @@ async function checkDrugTest() {
       await sendToDiscord(`🚨 __Drug test__ scheduled today on **${dateStr}**. @everyone`);
     } else if (message && message.toLowerCase().includes('please try again') && message.toLowerCase().includes('call-in timeframe')) {
       await sendToDiscord(`⚠️ __Outside call-in timeframe__ on **${dateStr}**. @everyone`);
-    } else if (!message || message.length < 10) {
-      await sendToDiscord(`Warning: Could not verify result on **${dateStr}**. Check debug files. Message: "${message}"`);
-    } else {
+    } else if (message && message.toLowerCase().includes('not scheduled')) {
       await sendToDiscord(`✅ __No drug test__ scheduled today on **${dateStr}**. @everyone`);
+    } else {
+      await sendToDiscord(`🚨 __CHECK MANUALLY__ - Could not confirm result on **${dateStr}**. Message: "${message}" @everyone`);
     }
 
   } catch (err) {
@@ -162,14 +169,3 @@ if (require.main === module) {
     process.exit(0);
   });
 }
-
-
-
-
-
-
-
-
-
-
-
