@@ -92,7 +92,7 @@ async function checkDrugTest() {
                body.includes('not scheduled') ||
                body.includes('please try again');
       },
-      { timeout: 15000 }
+      { timeout: 60000 }
     );
     console.log('Result detected on page, reading...');
 
