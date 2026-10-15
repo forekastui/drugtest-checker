@@ -69,16 +69,30 @@ async function checkDrugTest() {
 
     console.log('Waiting for PIN input...');
     await page.waitForSelector('#callInputCode', { timeout: 15000 });
+    // Clear field first then type, in case anything is pre-filled
+    await page.click('#callInputCode', { clickCount: 3 });
     await page.type('#callInputCode', PIN);
     console.log('PIN entered');
     
     console.log('Waiting for last name input...');
     await page.waitForSelector('#lettersInputLastName', { timeout: 15000 });
+    await page.click('#lettersInputLastName', { clickCount: 3 });
     await page.type('#lettersInputLastName', LAST_NAME);
     console.log('Last name entered');
 
     console.log('Clicking submit button...');
-    await page.click('button[type="submit"]');
+    // Explicitly target the English form submit button
+    await page.evaluate(() => {
+      const forms = document.querySelectorAll('form');
+      for (const form of forms) {
+        const pinField = form.querySelector('#callInputCode');
+        if (pinField) {
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.click();
+          break;
+        }
+      }
+    });
 
     console.log('Waiting for page to process...');
     await new Promise(resolve => setTimeout(resolve, 4000));
