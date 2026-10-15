@@ -50,19 +50,21 @@ async function checkDrugTest() {
     console.log('Navigating to website...');
     await page.goto(WEBSITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Handle cookie consent popup - retry up to 5 times
+    // Handle cookie consent popup - wait up to 10 seconds for it to appear then dismiss it
     console.log('Checking for cookie consent popup...');
-    for (let i = 0; i < 5; i++) {
+    try {
+      await page.waitForSelector('#truste-consent-button', { timeout: 10000 });
+      console.log('Found cookie ACCEPT button, clicking...');
+      await page.click('#truste-consent-button');
+      // Wait for popup to fully disappear before doing anything else
+      await page.waitForFunction(
+        () => !document.querySelector('#truste-consent-button'),
+        { timeout: 10000 }
+      );
+      console.log('Cookie consent dismissed, popup gone');
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const acceptButton = await page.$('#truste-consent-button');
-      if (acceptButton) {
-        console.log('Found cookie ACCEPT button, clicking...');
-        await acceptButton.click();
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('Cookie consent accepted');
-        break;
-      }
-      console.log(`Cookie popup not found yet (attempt ${i + 1}/5)...`);
+    } catch (err) {
+      console.log('No cookie popup appeared, continuing...');
     }
 
     console.log('Waiting for PIN input...');
